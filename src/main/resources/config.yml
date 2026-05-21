@@ -1,0 +1,22 @@
+# CutThin configuration
+
+# 디버그 로깅 활성화
+debug: false
+
+# 타이틀 기본 페이드 (개별 step에서 미지정 시 사용)
+default-fade:
+  in: 10
+  stay: 60
+  out: 20
+
+# freeze=true 컷신 진행 중 차단할 동작들
+prevent-during-cutscene:
+  movement: true       # 이동 차단 (시선 회전은 허용)
+  interaction: true    # 우클릭/블록 사용 차단
+  damage: true         # 받는/가하는 데미지 차단
+  inventory: true      # 인벤토리 클릭 차단
+  drop: true           # 아이템 드롭 차단
+  command: true        # 일반 플레이어의 명령어 차단 (op 제외)
+
+# 동일 플레이어에게 컷신 중복 재생 허용 여부
+allow-concurrent: false

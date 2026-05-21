@@ -1,0 +1,20 @@
+id: arcana-final-boss
+name: "드래곤 각성"
+freeze: true
+steps:
+  - { type: effect, effect: SLOWNESS, duration: 400, amplifier: 10 }
+  - { type: sound, sound: ENTITY_WITHER_DEATH, volume: 1.0, pitch: 0.8 }
+  - { type: title, title: "&4촌장이 쓰러졌다", subtitle: "&7거짓된 평화가 무너진다", fadeIn: 20, stay: 80, fadeOut: 20 }
+  - { type: wait, ticks: 140 }
+  - { type: sound, sound: ENTITY_ENDER_DRAGON_GROWL, volume: 1.0, pitch: 1.0 }
+  - { type: particle, particle: DRAGON_BREATH, count: 200, offsetX: 3.0, offsetY: 3.0, offsetZ: 3.0, speed: 0.05, at: PLAYER }
+  - { type: wait, ticks: 60 }
+  - { type: chat, message: "&5[드래곤] &f오랜 잠에서 깨어났다. 이 세계의 수호자가..." }
+  - { type: wait, ticks: 60 }
+  - { type: chat, message: "&5[드래곤] &f구원자여, 나의 비늘과 뿔을 가져가라. 너에게 자격이 있다." }
+  - { type: wait, ticks: 60 }
+  - { type: sound, sound: ENTITY_ENDER_DRAGON_AMBIENT, volume: 1.0, pitch: 1.0 }
+  - { type: title, title: "&6세계의 흐름이 제자리를 찾았다", subtitle: "&e당신은 이 세계의 구원자입니다", fadeIn: 20, stay: 100, fadeOut: 40 }
+  - { type: wait, ticks: 160 }
+  - { type: clear_effects }
+  - { type: fire_event, key: cutscene_end, placeholders: { stage: final-boss } }

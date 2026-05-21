@@ -1,0 +1,33 @@
+name: CutThin
+version: '1.0.0'
+main: kr.kjh9211.cutthin.CutThin
+api-version: '1.21'
+softdepend:
+  - story
+  - PlaceholderAPI
+commands:
+  cutscene:
+    description: Cutscene playback controls
+    usage: /cutscene <play|stop|list|info|reload>
+    aliases: [cs, cut]
+permissions:
+  cutthin.admin:
+    description: Full access to all CutThin commands
+    default: op
+    children:
+      cutthin.play: true
+      cutthin.stop: true
+      cutthin.list: true
+      cutthin.info: true
+      cutthin.reload: true
+  cutthin.play:
+    default: op
+  cutthin.stop:
+    default: op
+  cutthin.list:
+    default: true
+  cutthin.info:
+    default: true
+  cutthin.reload:
+    default: op
+authors: [kjh9211, aruru10313]

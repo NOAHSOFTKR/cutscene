@@ -1,0 +1,21 @@
+id: arcana-memory-restore
+name: "기억의 해독"
+freeze: true
+steps:
+  - { type: chat, message: "&b[코델리아] &f프리즘이 빛난다. 가만히 있어라." }
+  - { type: effect, effect: SLOWNESS, duration: 200, amplifier: 10 }
+  - { type: wait, ticks: 40 }
+  - { type: sound, sound: BLOCK_BEACON_ACTIVATE, volume: 1.0, pitch: 1.2 }
+  - { type: particle, particle: END_ROD, count: 60, offsetX: 1.5, offsetY: 2.0, offsetZ: 1.5, speed: 0.05, at: PLAYER }
+  - { type: title, title: "&b기억이 돌아온다", subtitle: "", fadeIn: 20, stay: 60, fadeOut: 0 }
+  - { type: wait, ticks: 80 }
+  - { type: chat, message: "&b[해독된 기억] &f루미네이트는 단순한 광물이 아니야. 이 세계 땅속에 흐르는 생명력 그 자체지." }
+  - { type: wait, ticks: 80 }
+  - { type: chat, message: "&b[해독된 기억] &f촌장과 감시자들이 이 세계의 생명력을 억지로 뽑아내어 가짜 낙원을 유지하고 있었던 거야." }
+  - { type: wait, ticks: 80 }
+  - { type: chat, message: "&b[해독된 기억] &f그 부작용으로 밖의 세계는 황폐해지고, 동물들은 기괴한 몬스터로 변해버렸다." }
+  - { type: wait, ticks: 60 }
+  - { type: sound, sound: UI_TOAST_CHALLENGE_COMPLETE, volume: 1.0, pitch: 1.0 }
+  - { type: title, title: "&b진실을 알게 되었다", subtitle: "&7루미네이트 세트 제작이 해금되었다", fadeIn: 10, stay: 80, fadeOut: 20 }
+  - { type: clear_effects }
+  - { type: fire_event, key: cutscene_end, placeholders: { stage: memory-restore } }

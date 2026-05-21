@@ -1,0 +1,25 @@
+id: arcana-prologue-exile
+name: "기억 소거와 추방"
+freeze: true
+steps:
+  - { type: effect, effect: BLINDNESS, duration: 240, amplifier: 5 }
+  - { type: effect, effect: SLOWNESS, duration: 240, amplifier: 10 }
+  - { type: wait, ticks: 20 }
+  - { type: chat, message: "&c[촌장] &f어리석은 것. 감히 '진실'을 훔쳐보려 하다니." }
+  - { type: wait, ticks: 60 }
+  - { type: chat, message: "&c[촌장] &f네가 본 빛은 모두 환상일 뿐이다. 평화를 위해 네 기억은 소거되어야 한다." }
+  - { type: wait, ticks: 70 }
+  - { type: sound, sound: ENTITY_ELDER_GUARDIAN_CURSE, volume: 1.0, pitch: 1.0 }
+  - { type: title, title: "&k지직거리는노이즈", subtitle: "&7머리가 깨질 듯한 고통...", fadeIn: 10, stay: 60, fadeOut: 0 }
+  - { type: wait, ticks: 60 }
+  - { type: chat, message: "&8[시스템] 루미네이트... 마을의 진실... 당신의 이름..." }
+  - { type: wait, ticks: 40 }
+  - { type: chat, message: "&8[시스템] 모든 것이 &k지직거리는노이즈&8로 변해갑니다." }
+  - { type: wait, ticks: 40 }
+  - { type: clear_inventory }
+  - { type: sound, sound: ENTITY_ENDERMAN_TELEPORT, volume: 1.0, pitch: 0.5 }
+  - { type: teleport, world: world, x: 0, y: 80, z: 0, randomRadius: 2000, safeY: true }
+  - { type: wait, ticks: 20 }
+  - { type: clear_effects }
+  - { type: title, title: "", subtitle: "&7낯선 곳에서 눈을 떴다...", fadeIn: 20, stay: 60, fadeOut: 20 }
+  - { type: fire_event, key: cutscene_end, placeholders: { stage: prologue } }
