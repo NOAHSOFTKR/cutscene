@@ -3,9 +3,11 @@ package kr.kjh9211.cutthin.runner
 import kr.kjh9211.cutthin.cutscene.ChatTarget
 import kr.kjh9211.cutthin.cutscene.CutsceneSession
 import kr.kjh9211.cutthin.cutscene.CutsceneStep
+import kr.kjh9211.cutthin.cutscene.Easing
 import kr.kjh9211.cutthin.cutscene.InventorySnapshot
 import kr.kjh9211.cutthin.cutscene.ParticleAnchor
 import kr.kjh9211.cutthin.event.CutsceneFireEvent
+import kr.kjh9211.cutthin.lock.PacketChatBlocker
 import kr.kjh9211.cutthin.placeholder.Placeholders
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
@@ -13,9 +15,23 @@ import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.potion.PotionEffect
+import org.bukkit.util.Vector
+import kotlin.math.atan2
+import kotlin.math.sqrt
 import kotlin.random.Random
 
-class StepExecutor(private val plugin: JavaPlugin) {
+class StepExecutor(
+    private val plugin: JavaPlugin,
+    private val packetChatBlocker: PacketChatBlocker? = null,
+) {
+
+    private fun sendToPlayer(player: Player, message: String) {
+        if (packetChatBlocker != null) {
+            packetChatBlocker.bypassed(player) { player.sendMessage(message) }
+        } else {
+            player.sendMessage(message)
+        }
+    }
 
     /**
      * Returns the delay (in ticks) until the next step should execute.
@@ -31,8 +47,16 @@ class StepExecutor(private val plugin: JavaPlugin) {
                 val text = replacePlaceholders(step.message, player, session)
                 val colored = colorize(text)
                 when (step.target) {
-                    ChatTarget.PLAYER -> player.sendMessage(colored)
-                    ChatTarget.ALL -> Bukkit.broadcastMessage(colored)
+                    ChatTarget.PLAYER -> sendToPlayer(player, colored)
+                    ChatTarget.ALL -> {
+                        if (packetChatBlocker != null) {
+                            Bukkit.getOnlinePlayers().forEach { recipient ->
+                                packetChatBlocker.bypassed(recipient) { recipient.sendMessage(colored) }
+                            }
+                        } else {
+                            Bukkit.broadcastMessage(colored)
+                        }
+                    }
                 }
                 0L
             }
@@ -161,7 +185,111 @@ class StepExecutor(private val plugin: JavaPlugin) {
                 )
                 0L
             }
+
+            is CutsceneStep.Move -> scheduleMove(step, session, player)
+
+            is CutsceneStep.LookAt -> scheduleLookAt(step, session, player)
+
+            is CutsceneStep.Velocity -> {
+                val vec = Vector(step.x, step.y, step.z)
+                player.velocity = if (step.add) player.velocity.clone().add(vec) else vec
+                0L
+            }
+
+            CutsceneStep.ClearChat -> {
+                repeat(100) { sendToPlayer(player, " ") }
+                0L
+            }
         }
+    }
+
+    private fun scheduleMove(step: CutsceneStep.Move, session: CutsceneSession, player: Player): Long {
+        val world = step.world?.let { Bukkit.getWorld(it) } ?: player.world
+        val start = player.location.clone()
+        val totalTicks = step.durationTicks.coerceAtLeast(1)
+
+        val endX = step.x
+        val endY = step.y
+        val endZ = step.z
+
+        val endYaw: Float
+        val endPitch: Float
+        if (step.preserveLook) {
+            endYaw = start.yaw
+            endPitch = start.pitch
+        } else {
+            val direction = Vector(endX - start.x, endY - start.y, endZ - start.z)
+            val (yaw, pitch) = directionToYawPitch(direction)
+            endYaw = yaw
+            endPitch = pitch
+        }
+
+        for (tick in 1..totalTicks) {
+            val raw = tick.toDouble() / totalTicks
+            val t = step.easing.apply(raw)
+            val x = start.x + (endX - start.x) * t
+            val y = start.y + (endY - start.y) * t
+            val z = start.z + (endZ - start.z) * t
+            val yaw = interpAngle(start.yaw, endYaw, t.toFloat())
+            val pitch = lerp(start.pitch, endPitch, t.toFloat())
+
+            val task = Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+                val live = Bukkit.getPlayer(session.playerId) ?: return@Runnable
+                if (!live.isOnline || session.stopped) return@Runnable
+                live.teleport(Location(world, x, y, z, yaw, pitch))
+            }, tick.toLong())
+            session.addSubTask(task)
+        }
+        return totalTicks.toLong()
+    }
+
+    private fun scheduleLookAt(step: CutsceneStep.LookAt, session: CutsceneSession, player: Player): Long {
+        val totalTicks = step.durationTicks.coerceAtLeast(1)
+        val start = player.location.clone()
+        val targetWorld = step.world?.let { Bukkit.getWorld(it) } ?: player.world
+
+        val targetVec = Vector(step.x, step.y, step.z)
+        val eyeOffset = player.eyeHeight
+        val direction = Vector(
+            targetVec.x - start.x,
+            targetVec.y - (start.y + eyeOffset),
+            targetVec.z - start.z,
+        )
+        val (endYaw, endPitch) = directionToYawPitch(direction)
+
+        for (tick in 1..totalTicks) {
+            val raw = tick.toDouble() / totalTicks
+            val t = step.easing.apply(raw).toFloat()
+            val yaw = interpAngle(start.yaw, endYaw, t)
+            val pitch = lerp(start.pitch, endPitch, t)
+
+            val task = Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+                val live = Bukkit.getPlayer(session.playerId) ?: return@Runnable
+                if (!live.isOnline || session.stopped) return@Runnable
+                val loc = live.location.clone()
+                live.teleport(Location(targetWorld, loc.x, loc.y, loc.z, yaw, pitch))
+            }, tick.toLong())
+            session.addSubTask(task)
+        }
+        return totalTicks.toLong()
+    }
+
+    private fun directionToYawPitch(direction: Vector): Pair<Float, Float> {
+        val dx = direction.x
+        val dy = direction.y
+        val dz = direction.z
+        val horizontal = sqrt(dx * dx + dz * dz)
+        val yaw = Math.toDegrees(atan2(-dx, dz)).toFloat()
+        val pitch = Math.toDegrees(atan2(-dy, horizontal)).toFloat()
+        return yaw to pitch
+    }
+
+    private fun lerp(a: Float, b: Float, t: Float): Float = a + (b - a) * t
+
+    /** Yaw 보간 — -180~180 경계를 넘어가는 경우 짧은 쪽으로 회전. */
+    private fun interpAngle(a: Float, b: Float, t: Float): Float {
+        var diff = ((b - a + 540f) % 360f) - 180f
+        return a + diff * t
     }
 
     private fun resolveTeleportTarget(step: CutsceneStep.Teleport, player: Player): Location? {

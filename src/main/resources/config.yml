@@ -11,12 +11,32 @@ default-fade:
 
 # freeze=true 컷신 진행 중 차단할 동작들
 prevent-during-cutscene:
-  movement: true       # 이동 차단 (시선 회전은 허용)
-  interaction: true    # 우클릭/블록 사용 차단
-  damage: true         # 받는/가하는 데미지 차단
-  inventory: true      # 인벤토리 클릭 차단
-  drop: true           # 아이템 드롭 차단
-  command: true        # 일반 플레이어의 명령어 차단 (op 제외)
+  movement: true            # 이동 차단 (시선 회전은 허용)
+  interaction: true         # 우클릭/블록 사용 차단
+  damage: true              # 받는/가하는 데미지 차단
+  inventory: true           # 인벤토리 클릭 차단
+  inventory-open: true      # 인벤토리/상자 등 UI 열기 차단 (E 키)
+  drop: true                # 아이템 드롭 차단
+  command: true             # 일반 플레이어의 명령어 차단 (op 제외)
+  gamemode-change: true     # 게임모드 전환(특히 관전모드) 차단
+  receive-messages: true    # 공개 채팅 수신 차단
+  receive-whispers: true    # /msg /tell 등 귓속말 수신 차단
+  receive-system: true      # 입장/퇴장/사망 시스템 메시지 차단
 
 # 동일 플레이어에게 컷신 중복 재생 허용 여부
 allow-concurrent: false
+
+# Tab 키 처리 모드
+#   HEADER_FOOTER : 플레이어 목록 헤더/풋터로 "컷신 진행 중" 표시, 다른 플레이어 목록은 빈줄로 밀어냄
+#   HIDE_PLAYERS  : 컷신 중 다른 플레이어가 세상/탭에서 모두 사라짐 (완전 시네마틱)
+#   NONE          : Tab 키 처리 비활성화
+tab-mode: HEADER_FOOTER
+tab-header: "&c&l컷신 진행 중\n&7잠시만 기다려주세요\n\n"
+tab-footer: "\n\n&8(컷신이 끝날 때까지 잠시만)"
+
+# 컷신 시작 시 채팅창을 자동으로 비우기 (100줄 공백 푸시)
+auto-clear-chat-on-start: true
+
+# 귓속말 가로채기 — 발신자에게 보여줄 메시지 ({target}은 수신자 이름)
+whisper-commands: ["/msg", "/tell", "/w", "/whisper", "/pm"]
+whisper-blocked-message: "&c{target}님은 지금 메시지를 받을 수 없는 상태입니다."

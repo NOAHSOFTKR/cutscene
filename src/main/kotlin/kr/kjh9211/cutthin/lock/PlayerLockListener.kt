@@ -8,10 +8,13 @@ import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.bukkit.event.player.PlayerDropItemEvent
+import org.bukkit.event.player.PlayerGameModeChangeEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
+import org.bukkit.event.player.PlayerTeleportEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -38,17 +41,33 @@ class PlayerLockListener(private val config: FileConfiguration) : Listener {
     private fun preventInteraction(): Boolean = config.getBoolean("prevent-during-cutscene.interaction", true)
     private fun preventDamage(): Boolean = config.getBoolean("prevent-during-cutscene.damage", true)
     private fun preventInventory(): Boolean = config.getBoolean("prevent-during-cutscene.inventory", true)
+    private fun preventInventoryOpen(): Boolean = config.getBoolean("prevent-during-cutscene.inventory-open", true)
     private fun preventDrop(): Boolean = config.getBoolean("prevent-during-cutscene.drop", true)
     private fun preventCommand(): Boolean = config.getBoolean("prevent-during-cutscene.command", true)
+    private fun preventGameMode(): Boolean = config.getBoolean("prevent-during-cutscene.gamemode-change", true)
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     fun onMove(event: PlayerMoveEvent) {
+        if (event is PlayerTeleportEvent) return
         if (!isLocked(event.player.uniqueId) || !preventMovement()) return
         val from = event.from
         val to = event.to ?: return
         if (from.blockX != to.blockX || from.blockY != to.blockY || from.blockZ != to.blockZ) {
             event.setTo(from.clone().apply { yaw = to.yaw; pitch = to.pitch })
         }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    fun onInventoryOpen(event: InventoryOpenEvent) {
+        val player = event.player as? Player ?: return
+        if (!isLocked(player.uniqueId) || !preventInventoryOpen()) return
+        event.isCancelled = true
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    fun onGameModeChange(event: PlayerGameModeChangeEvent) {
+        if (!isLocked(event.player.uniqueId) || !preventGameMode()) return
+        event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)

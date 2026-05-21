@@ -52,6 +52,10 @@ steps:
 | `teleport` | `world`, `x/y/z: Double`, `randomRadius: Int?`, `safeY: Boolean` | 텔레포트 |
 | `command` | `command: String` | 콘솔 권한으로 명령 실행. `{player}` 치환 가능 |
 | `fire_event` | `key: String`, `placeholders: Map` | `CutsceneFireEvent` 발행. 스토리 플러그인이 리스닝 |
+| `move` | `target: {world?, x, y, z}`, `duration_ticks: Int`, `easing: LINEAR\|EASE_IN\|EASE_OUT\|EASE_IN_OUT`, `preserve_look: Boolean` | 벡터 보간으로 부드럽게 이동. 매 틱 텔레포트 |
+| `look_at` | `target: {world?, x, y, z}`, `duration_ticks: Int`, `easing` | 시선만 보간하여 대상을 향해 회전 |
+| `velocity` | `x`, `y`, `z: Double`, `add: Boolean` | 일회성 벡터 적용 (`add: true`면 기존 velocity에 더함) |
+| `clear_chat` | — | 100줄 공백을 보내 이전 채팅을 화면 밖으로 밀어냄 |
 
 ### 플레이스홀더
 
@@ -200,6 +204,66 @@ object CutThinAPI {
 | `CutsceneStartEvent` | 컷신 시작 직전 | ✅ |
 | `CutsceneEndEvent` | 컷신 종료 (완료/중단/사망/퇴장/에러) | ❌ |
 | `CutsceneFireEvent` | `fire_event` step 실행 시 | ❌ |
+
+## 락 / 방해 차단
+
+`freeze: true` 컷신 진행 중 자동 차단되는 동작 (모두 config로 토글 가능):
+
+| 항목 | config 키 | 메커니즘 |
+|------|-----------|----------|
+| 이동 | `prevent-during-cutscene.movement` | `PlayerMoveEvent`에서 위치 변경 취소. 시선 회전은 허용. 컷신 자체 `move` step의 텔레포트는 통과 |
+| 우클릭/상호작용 | `prevent-during-cutscene.interaction` | `PlayerInteractEvent` cancel |
+| 데미지 | `prevent-during-cutscene.damage` | `EntityDamageEvent` / `EntityDamageByEntityEvent` cancel |
+| 인벤토리 클릭 | `prevent-during-cutscene.inventory` | `InventoryClickEvent` cancel |
+| 인벤토리 / 상자 **열기** | `prevent-during-cutscene.inventory-open` | `InventoryOpenEvent` cancel — UI 자체가 안 열림 |
+| 아이템 드롭 | `prevent-during-cutscene.drop` | `PlayerDropItemEvent` cancel |
+| 일반 플레이어 명령어 | `prevent-during-cutscene.command` | op 예외. `/cutscene` 계열은 허용 |
+| 게임모드 전환 (관전모드 등) | `prevent-during-cutscene.gamemode-change` | `PlayerGameModeChangeEvent` cancel |
+| 공개 채팅 수신 | `prevent-during-cutscene.receive-messages` | `AsyncPlayerChatEvent.recipients` 필터 |
+| 귓속말 수신 | `prevent-during-cutscene.receive-whispers` | `/msg /tell /w /whisper /pm` 가로채기 + 발신자에게 "수신 불가" 알림 |
+| 시스템 메시지 수신 | `prevent-during-cutscene.receive-system` | 입퇴장/사망 메시지의 `message`를 null로 세팅 후 non-locked에게만 재발송 |
+| Tab 키 | `tab-mode` | 아래 참조 |
+
+### Tab 키 모드
+
+```yaml
+tab-mode: HEADER_FOOTER   # HEADER_FOOTER | HIDE_PLAYERS | NONE
+tab-header: "&c&l컷신 진행 중\n&7잠시만 기다려주세요\n\n"
+tab-footer: "\n\n&8(컷신이 끝날 때까지 잠시만)"
+```
+
+- **HEADER_FOOTER** (기본) — Tab 누르면 상단에 "컷신 진행 중" 안내. 여러 줄 공백으로 실제 플레이어 목록을 화면 밖으로 밀어냄. 다른 플레이어 모습은 그대로 보임.
+- **HIDE_PLAYERS** — 컷신 중 다른 플레이어가 세상과 Tab에서 모두 사라짐. 완전 시네마틱.
+- **NONE** — Tab 처리 비활성화.
+
+### 채팅 청소
+
+```yaml
+auto-clear-chat-on-start: true
+```
+
+freeze 컷신 시작 시 자동으로 100줄 공백을 푸시. YAML에서 `{ type: clear_chat }` step으로 임의 시점에 수동 호출도 가능.
+
+### 귓속말 발신자 알림
+
+```yaml
+whisper-commands: ["/msg", "/tell", "/w", "/whisper", "/pm"]
+whisper-blocked-message: "&c{target}님은 지금 메시지를 받을 수 없는 상태입니다."
+```
+
+`{target}`은 수신자 이름으로 치환.
+
+### ProtocolLib (선택 의존성)
+
+ProtocolLib이 설치돼 있으면 자동 감지·등록되어 **모든 outgoing chat 패킷**(SYSTEM_CHAT, CHAT, DISGUISED_CHAT)을 차단:
+
+- 다른 플러그인이 `Player.sendMessage()`로 직접 보내는 메시지
+- `Bukkit.broadcastMessage()`로 보낸 메시지
+- 이벤트 없이 전송되는 모든 채팅
+
+→ 락 플레이어에게 도달하지 않음. 컷신 자체 채팅은 bypass set으로 통과.
+
+미설치 시 이벤트 기반 차단만 작동 (공개채팅 / 귓속말 / 시스템 메시지 / `/say`).
 
 ## PlaceholderAPI 확장 (`%cutthin:*%`)
 

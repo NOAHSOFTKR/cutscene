@@ -2,6 +2,7 @@ package kr.kjh9211.cutthin.loader
 
 import kr.kjh9211.cutthin.cutscene.ChatTarget
 import kr.kjh9211.cutthin.cutscene.CutsceneStep
+import kr.kjh9211.cutthin.cutscene.Easing
 import kr.kjh9211.cutthin.cutscene.ParticleAnchor
 import org.bukkit.Particle
 import org.bukkit.Sound
@@ -107,6 +108,40 @@ class StepParser {
                     ?: emptyMap(),
             )
 
+            "move" -> {
+                val target = parseTargetCoordinates(map, defaultY = 80.0)
+                CutsceneStep.Move(
+                    world = target.world,
+                    x = target.x,
+                    y = target.y,
+                    z = target.z,
+                    durationTicks = intField(map, "duration_ticks", "duration", "ticks"),
+                    easing = Easing.parse(map["easing"] as? String),
+                    preserveLook = (map["preserve_look"] as? Boolean) ?: (map["preserveLook"] as? Boolean) ?: false,
+                )
+            }
+
+            "look_at", "lookat" -> {
+                val target = parseTargetCoordinates(map, defaultY = 80.0)
+                CutsceneStep.LookAt(
+                    world = target.world,
+                    x = target.x,
+                    y = target.y,
+                    z = target.z,
+                    durationTicks = intField(map, "duration_ticks", "duration", "ticks"),
+                    easing = Easing.parse(map["easing"] as? String),
+                )
+            }
+
+            "velocity" -> CutsceneStep.Velocity(
+                x = doubleField(map, "x", default = 0.0),
+                y = doubleField(map, "y", default = 0.0),
+                z = doubleField(map, "z", default = 0.0),
+                add = (map["add"] as? Boolean) ?: false,
+            )
+
+            "clear_chat", "clearchat" -> CutsceneStep.ClearChat
+
             else -> throw IllegalArgumentException("Unknown step type: '$type'")
         }
     }
@@ -144,6 +179,24 @@ class StepParser {
             (map[key] as? Number)?.let { return it.toFloat() }
         }
         return default ?: throw IllegalArgumentException("Required float field not found among ${keys.toList()} in $map")
+    }
+
+    private data class TargetCoordinates(val world: String?, val x: Double, val y: Double, val z: Double)
+
+    @Suppress("UNCHECKED_CAST")
+    private fun parseTargetCoordinates(map: Map<String, Any?>, defaultY: Double): TargetCoordinates {
+        val nested: Map<String, Any?>? = when (val t = map["target"]) {
+            is Map<*, *> -> t.entries.associate { (k, v) -> k.toString() to v }
+            is org.bukkit.configuration.ConfigurationSection -> t.getValues(false).mapKeys { it.key }
+            else -> null
+        }
+        val source = nested ?: map
+        return TargetCoordinates(
+            world = source["world"] as? String,
+            x = doubleField(source, "x", default = 0.0),
+            y = doubleField(source, "y", default = defaultY),
+            z = doubleField(source, "z", default = 0.0),
+        )
     }
 
     private fun parseChatTarget(value: String?): ChatTarget =

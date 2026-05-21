@@ -5,6 +5,7 @@ api-version: '1.21'
 softdepend:
   - story
   - PlaceholderAPI
+  - ProtocolLib
 commands:
   cutscene:
     description: Cutscene playback controls

@@ -80,4 +80,32 @@ sealed class CutsceneStep {
         val key: String,
         val placeholders: Map<String, String> = emptyMap(),
     ) : CutsceneStep()
+
+    data class Move(
+        val world: String?,
+        val x: Double,
+        val y: Double,
+        val z: Double,
+        val durationTicks: Int,
+        val easing: Easing = Easing.LINEAR,
+        val preserveLook: Boolean = false,
+    ) : CutsceneStep()
+
+    data class LookAt(
+        val world: String?,
+        val x: Double,
+        val y: Double,
+        val z: Double,
+        val durationTicks: Int,
+        val easing: Easing = Easing.LINEAR,
+    ) : CutsceneStep()
+
+    data class Velocity(
+        val x: Double,
+        val y: Double,
+        val z: Double,
+        val add: Boolean = false,
+    ) : CutsceneStep()
+
+    object ClearChat : CutsceneStep()
 }

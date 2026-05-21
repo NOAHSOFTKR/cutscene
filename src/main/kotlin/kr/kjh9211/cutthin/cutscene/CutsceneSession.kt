@@ -3,6 +3,7 @@ package kr.kjh9211.cutthin.cutscene
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.scheduler.BukkitTask
+import java.util.Collections
 import java.util.UUID
 
 class CutsceneSession(
@@ -24,11 +25,21 @@ class CutsceneSession(
     @Volatile
     var hiddenInventory: InventorySnapshot? = null
 
+    val subTasks: MutableList<BukkitTask> = Collections.synchronizedList(mutableListOf())
+
+    fun addSubTask(task: BukkitTask) {
+        subTasks.add(task)
+    }
+
     fun cancelPending() {
         pendingTask?.let { task ->
             if (!task.isCancelled) task.cancel()
         }
         pendingTask = null
+        synchronized(subTasks) {
+            subTasks.forEach { if (!it.isCancelled) it.cancel() }
+            subTasks.clear()
+        }
     }
 
     companion object {
