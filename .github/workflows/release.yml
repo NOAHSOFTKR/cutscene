@@ -1,0 +1,48 @@
+name: Minecraft Plugin Release
+
+on:
+  push:
+    tags:
+      - 'v*' # 태그가 v1.0.0, v1.2-SNAPSHOT 등 v로 시작하면 실행
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. Java 설정 (플러그인이 지원하는 대상 버전에 맞추세요. 예: 17 또는 21)
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      # 2. Maven 빌드
+      - name: Build Plugin
+        run: mvn clean package -DskipTests
+
+      # 3. Release에 올릴 파일 정리
+      # 마인크래프트 플러그인은 보통 하나만 생성되므로 target/*.jar를 찾습니다.
+      - name: Prepare Artifact
+        id: artifact
+        run: |
+          # 'original-'이 붙은 파일이나 sources.jar 등은 제외하고 진짜 플러그인 jar만 선택
+          PLUGIN_FILE=$(ls target/*.jar | grep -vE "original|sources|javadoc" | head -n 1)
+          echo "PLUGIN_PATH=$PLUGIN_FILE" >> $GITHUB_ENV
+          echo "Found Plugin: $PLUGIN_FILE"
+
+      # 4. GitHub Release 생성 및 파일 업로드
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.PLUGIN_PATH }}
+          # 태그 메시지나 커밋 로그를 기반으로 본문을 자동 생성하고 싶을 때 유용
+          generate_release_notes: true 
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
