@@ -25,7 +25,7 @@ class PacketChatBlocker(
     private val isLocked: (UUID) -> Boolean,
 ) {
     private val bypassing: MutableSet<UUID> = ConcurrentHashMap.newKeySet()
-    private var registered: Boolean = false
+    private var adapter: PacketAdapter? = null
 
     fun bypassed(player: Player, action: () -> Unit) {
         bypassing.add(player.uniqueId)
@@ -37,14 +37,14 @@ class PacketChatBlocker(
     }
 
     fun register() {
-        if (registered) return
+        if (adapter != null) return
         val manager = ProtocolLibrary.getProtocolManager()
 
         val packetTypes = mutableListOf(PacketType.Play.Server.SYSTEM_CHAT)
         runCatching { packetTypes.add(PacketType.Play.Server.DISGUISED_CHAT) }
         runCatching { packetTypes.add(PacketType.Play.Server.CHAT) }
 
-        manager.addPacketListener(object : PacketAdapter(
+        val listener = object : PacketAdapter(
             plugin,
             ListenerPriority.NORMAL,
             *packetTypes.toTypedArray(),
@@ -57,8 +57,16 @@ class PacketChatBlocker(
                     event.isCancelled = true
                 }
             }
-        })
-        registered = true
+        }
+        manager.addPacketListener(listener)
+        adapter = listener
         plugin.logger.info("PacketChatBlocker registered — full chat suppression active")
+    }
+
+    fun unregister() {
+        val listener = adapter ?: return
+        ProtocolLibrary.getProtocolManager().removePacketListener(listener)
+        adapter = null
+        plugin.logger.info("PacketChatBlocker unregistered")
     }
 }

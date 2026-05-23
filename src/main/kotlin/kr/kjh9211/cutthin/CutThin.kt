@@ -90,6 +90,7 @@ class CutThin : JavaPlugin() {
         if (::runner.isInitialized) {
             runner.stopAll(CutsceneEndEvent.Reason.STOPPED)
         }
+        packetChatBlocker?.unregister()
         if (::lockListener.isInitialized) {
             lockListener.clear()
         }
@@ -136,15 +137,18 @@ class CutThin : JavaPlugin() {
             tabListController.release(player)
         }
 
-        val snapshot = session.hiddenInventory
-        if (snapshot != null) {
-            if (player != null && player.isOnline) {
-                snapshot.restoreTo(player)
+        // On death, onDeathBeforeStop already added the snapshot to event.drops — skip restore.
+        if (reason != CutsceneEndEvent.Reason.PLAYER_DEATH) {
+            val snapshot = session.hiddenInventory
+            if (snapshot != null) {
                 session.hiddenInventory = null
-            } else {
-                logger.warning(
-                    "Hidden inventory for ${session.playerName} could not be restored — player offline at session end (reason=$reason)"
-                )
+                if (player != null && player.isOnline) {
+                    snapshot.restoreTo(player)
+                } else {
+                    logger.warning(
+                        "Hidden inventory for ${session.playerName} could not be restored — player offline at session end (reason=$reason)"
+                    )
+                }
             }
         }
 
