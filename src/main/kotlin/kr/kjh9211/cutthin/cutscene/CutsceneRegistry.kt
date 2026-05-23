@@ -1,8 +1,10 @@
 package kr.kjh9211.cutthin.cutscene
 
+import java.util.concurrent.ConcurrentHashMap
+
 class CutsceneRegistry {
 
-    private val cutscenes = mutableMapOf<String, Cutscene>()
+    private val cutscenes = ConcurrentHashMap<String, Cutscene>()
 
     fun register(cutscene: Cutscene) {
         cutscenes[cutscene.id] = cutscene

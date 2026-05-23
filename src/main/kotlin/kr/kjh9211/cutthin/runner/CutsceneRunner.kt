@@ -34,14 +34,23 @@ class CutsceneRunner(
             return StartResult.AlreadyPlaying
         }
 
+        val session = CutsceneSession.snapshot(player, cutscene)
+
+        // Insert into map before firing the event: if an event handler calls start() again
+        // for the same player, putIfAbsent ensures only one session wins.
+        if (!allowConcurrent && sessions.putIfAbsent(player.uniqueId, session) != null) {
+            return StartResult.AlreadyPlaying
+        } else if (allowConcurrent) {
+            sessions[player.uniqueId] = session
+        }
+
         val startEvent = CutsceneStartEvent(player, cutscene)
         Bukkit.getPluginManager().callEvent(startEvent)
         if (startEvent.isCancelled) {
+            sessions.remove(player.uniqueId, session)
             return StartResult.Cancelled
         }
 
-        val session = CutsceneSession.snapshot(player, cutscene)
-        sessions[player.uniqueId] = session
         onSessionStart(session)
         scheduleNext(session, 0L)
         return StartResult.Started(session)
@@ -116,8 +125,8 @@ class CutsceneRunner(
     }
 
     private fun finish(session: CutsceneSession) {
-        if (session.stopped) return
-        sessions.remove(session.playerId)
+        session.stopped = true
+        if (sessions.remove(session.playerId) == null) return
         session.cancelPending()
         val player = Bukkit.getPlayer(session.playerId)
         if (player != null) {
