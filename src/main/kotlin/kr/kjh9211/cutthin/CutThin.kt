@@ -14,6 +14,7 @@ import kr.kjh9211.cutthin.lock.TabListController
 import kr.kjh9211.cutthin.placeholder.CutThinPlaceholderBridge
 import kr.kjh9211.cutthin.runner.CutsceneRunner
 import kr.kjh9211.cutthin.runner.StepExecutor
+import kr.kjh9211.cutthin.spike.CameraSpikeCommand // TEMP Phase 0 spike — remove before commit
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
@@ -79,6 +80,9 @@ class CutThin : JavaPlugin() {
         } ?: logger.warning("Command 'cutscene' is missing from plugin.yml")
 
         CutThinAPI.bind(registry, runner, { reloadCutscenes() })
+
+        // TEMP Phase 0 spike — remove this block before commit
+        getCommand("cameraspike")?.setExecutor(CameraSpikeCommand(this))
 
         placeholderBridge = CutThinPlaceholderBridge(this, { registry }, { runner })
         placeholderBridge.registerIfAvailable()
