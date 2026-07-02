@@ -23,6 +23,7 @@ import kotlin.random.Random
 class StepExecutor(
     private val plugin: JavaPlugin,
     private val packetChatBlocker: PacketChatBlocker? = null,
+    private val cameraRig: CameraRigController? = null,
 ) {
 
     private fun sendToPlayer(player: Player, message: String) {
@@ -236,7 +237,12 @@ class StepExecutor(
             val task = Bukkit.getScheduler().runTaskLater(plugin, Runnable {
                 val live = Bukkit.getPlayer(session.playerId) ?: return@Runnable
                 if (!live.isOnline || session.stopped) return@Runnable
-                live.teleport(Location(world, x, y, z, yaw, pitch))
+                val loc = Location(world, x, y, z, yaw, pitch)
+                live.teleport(loc)
+                cameraRig?.bind(session, live, loc.clone().add(0.0, live.eyeHeight, 0.0))
+                if (tick == totalTicks) {
+                    cameraRig?.release(session, live)
+                }
             }, tick.toLong())
             session.addSubTask(task)
         }
@@ -267,7 +273,12 @@ class StepExecutor(
                 val live = Bukkit.getPlayer(session.playerId) ?: return@Runnable
                 if (!live.isOnline || session.stopped) return@Runnable
                 val loc = live.location.clone()
-                live.teleport(Location(targetWorld, loc.x, loc.y, loc.z, yaw, pitch))
+                val newLoc = Location(targetWorld, loc.x, loc.y, loc.z, yaw, pitch)
+                live.teleport(newLoc)
+                cameraRig?.bind(session, live, newLoc.clone().add(0.0, live.eyeHeight, 0.0))
+                if (tick == totalTicks) {
+                    cameraRig?.release(session, live)
+                }
             }, tick.toLong())
             session.addSubTask(task)
         }

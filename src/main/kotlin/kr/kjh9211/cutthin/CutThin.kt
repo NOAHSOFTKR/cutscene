@@ -12,6 +12,7 @@ import kr.kjh9211.cutthin.lock.PlayerLockListener
 import kr.kjh9211.cutthin.lock.SessionLifecycleListener
 import kr.kjh9211.cutthin.lock.TabListController
 import kr.kjh9211.cutthin.placeholder.CutThinPlaceholderBridge
+import kr.kjh9211.cutthin.runner.CameraRigController
 import kr.kjh9211.cutthin.runner.CutsceneRunner
 import kr.kjh9211.cutthin.runner.StepExecutor
 import org.bukkit.Bukkit
@@ -28,6 +29,7 @@ class CutThin : JavaPlugin() {
     private lateinit var messageBlockListener: MessageBlockListener
     private lateinit var placeholderBridge: CutThinPlaceholderBridge
     private var packetChatBlocker: PacketChatBlocker? = null
+    private var cameraRigController: CameraRigController? = null
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -46,13 +48,17 @@ class CutThin : JavaPlugin() {
             } catch (ex: Throwable) {
                 logger.warning("ProtocolLib found but PacketChatBlocker init failed: ${ex.message}")
             }
+            cameraRigController = CameraRigController()
         } else {
-            logger.info("ProtocolLib not found — chat suppression uses event-based fallback only")
+            logger.info(
+                "ProtocolLib not found — chat suppression uses event-based fallback only, " +
+                    "Move/LookAt will teleport the player directly instead of using a smoothed camera rig"
+            )
         }
 
         extractDefaultCutscenes()
 
-        val executor = StepExecutor(this, packetChatBlocker)
+        val executor = StepExecutor(this, packetChatBlocker, cameraRigController)
         runner = CutsceneRunner(
             plugin = this,
             executor = executor,
@@ -136,6 +142,7 @@ class CutThin : JavaPlugin() {
         if (player != null) {
             tabListController.release(player)
         }
+        cameraRigController?.release(session, player)
 
         // On death, onDeathBeforeStop already added the snapshot to event.drops — skip restore.
         if (reason != CutsceneEndEvent.Reason.PLAYER_DEATH) {
