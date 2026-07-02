@@ -2,10 +2,11 @@ name: CutThin
 version: '1.0.0'
 main: kr.kjh9211.cutthin.CutThin
 api-version: '1.21'
+depend:
+  - ProtocolLib
 softdepend:
   - story
   - PlaceholderAPI
-  - ProtocolLib
 commands:
   cutscene:
     description: Cutscene playback controls

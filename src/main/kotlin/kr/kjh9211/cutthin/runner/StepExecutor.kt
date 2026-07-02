@@ -22,16 +22,12 @@ import kotlin.random.Random
 
 class StepExecutor(
     private val plugin: JavaPlugin,
-    private val packetChatBlocker: PacketChatBlocker? = null,
-    private val cameraRig: CameraRigController? = null,
+    private val packetChatBlocker: PacketChatBlocker,
+    private val cameraRig: CameraRigController,
 ) {
 
     private fun sendToPlayer(player: Player, message: String) {
-        if (packetChatBlocker != null) {
-            packetChatBlocker.bypassed(player) { player.sendMessage(message) }
-        } else {
-            player.sendMessage(message)
-        }
+        packetChatBlocker.bypassed(player) { player.sendMessage(message) }
     }
 
     /**
@@ -50,12 +46,8 @@ class StepExecutor(
                 when (step.target) {
                     ChatTarget.PLAYER -> sendToPlayer(player, colored)
                     ChatTarget.ALL -> {
-                        if (packetChatBlocker != null) {
-                            Bukkit.getOnlinePlayers().forEach { recipient ->
-                                packetChatBlocker.bypassed(recipient) { recipient.sendMessage(colored) }
-                            }
-                        } else {
-                            Bukkit.broadcastMessage(colored)
+                        Bukkit.getOnlinePlayers().forEach { recipient ->
+                            packetChatBlocker.bypassed(recipient) { recipient.sendMessage(colored) }
                         }
                     }
                 }
@@ -239,9 +231,9 @@ class StepExecutor(
                 if (!live.isOnline || session.stopped) return@Runnable
                 val loc = Location(world, x, y, z, yaw, pitch)
                 live.teleport(loc)
-                cameraRig?.bind(session, live, loc.clone().add(0.0, live.eyeHeight, 0.0))
+                cameraRig.bind(session, live, loc.clone().add(0.0, live.eyeHeight, 0.0))
                 if (tick == totalTicks) {
-                    cameraRig?.release(session, live)
+                    cameraRig.release(session, live)
                 }
             }, tick.toLong())
             session.addSubTask(task)
@@ -275,9 +267,9 @@ class StepExecutor(
                 val loc = live.location.clone()
                 val newLoc = Location(targetWorld, loc.x, loc.y, loc.z, yaw, pitch)
                 live.teleport(newLoc)
-                cameraRig?.bind(session, live, newLoc.clone().add(0.0, live.eyeHeight, 0.0))
+                cameraRig.bind(session, live, newLoc.clone().add(0.0, live.eyeHeight, 0.0))
                 if (tick == totalTicks) {
-                    cameraRig?.release(session, live)
+                    cameraRig.release(session, live)
                 }
             }, tick.toLong())
             session.addSubTask(task)

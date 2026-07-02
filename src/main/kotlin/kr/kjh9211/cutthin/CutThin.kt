@@ -28,8 +28,8 @@ class CutThin : JavaPlugin() {
     private lateinit var tabListController: TabListController
     private lateinit var messageBlockListener: MessageBlockListener
     private lateinit var placeholderBridge: CutThinPlaceholderBridge
-    private var packetChatBlocker: PacketChatBlocker? = null
-    private var cameraRigController: CameraRigController? = null
+    private lateinit var packetChatBlocker: PacketChatBlocker
+    private lateinit var cameraRigController: CameraRigController
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -40,21 +40,11 @@ class CutThin : JavaPlugin() {
         tabListController = TabListController(this, config)
         messageBlockListener = MessageBlockListener(config, lockListener::isLocked)
 
-        if (server.pluginManager.getPlugin("ProtocolLib") != null) {
-            try {
-                val blocker = PacketChatBlocker(this, lockListener::isLocked)
-                blocker.register()
-                packetChatBlocker = blocker
-            } catch (ex: Throwable) {
-                logger.warning("ProtocolLib found but PacketChatBlocker init failed: ${ex.message}")
-            }
-            cameraRigController = CameraRigController()
-        } else {
-            logger.info(
-                "ProtocolLib not found — chat suppression uses event-based fallback only, " +
-                    "Move/LookAt will teleport the player directly instead of using a smoothed camera rig"
-            )
-        }
+        // ProtocolLib is a hard dependency (plugin.yml `depend`) — Bukkit refuses to enable
+        // CutThin at all if it's missing, so no runtime presence check is needed here.
+        packetChatBlocker = PacketChatBlocker(this, lockListener::isLocked)
+        packetChatBlocker.register()
+        cameraRigController = CameraRigController()
 
         extractDefaultCutscenes()
 
@@ -96,7 +86,9 @@ class CutThin : JavaPlugin() {
         if (::runner.isInitialized) {
             runner.stopAll(CutsceneEndEvent.Reason.STOPPED)
         }
-        packetChatBlocker?.unregister()
+        if (::packetChatBlocker.isInitialized) {
+            packetChatBlocker.unregister()
+        }
         if (::lockListener.isInitialized) {
             lockListener.clear()
         }
@@ -142,7 +134,9 @@ class CutThin : JavaPlugin() {
         if (player != null) {
             tabListController.release(player)
         }
-        cameraRigController?.release(session, player)
+        if (::cameraRigController.isInitialized) {
+            cameraRigController.release(session, player)
+        }
 
         // On death, onDeathBeforeStop already added the snapshot to event.drops — skip restore.
         if (reason != CutsceneEndEvent.Reason.PLAYER_DEATH) {
@@ -165,10 +159,8 @@ class CutThin : JavaPlugin() {
     }
 
     private fun clearChat(player: Player) {
-        val blocker = packetChatBlocker
         repeat(100) {
-            if (blocker != null) blocker.bypassed(player) { player.sendMessage(" ") }
-            else player.sendMessage(" ")
+            packetChatBlocker.bypassed(player) { player.sendMessage(" ") }
         }
     }
 }
