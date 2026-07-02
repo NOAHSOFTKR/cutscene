@@ -11,6 +11,10 @@ commands:
     description: Cutscene playback controls
     usage: /cutscene <play|stop|list|info|reload>
     aliases: [cs, cut]
+  cameraspike:
+    description: TEMP Phase 0 camera spike test — remove before commit
+    usage: /cameraspike <start [spectator] [display]|stop>
+    permission: op
 permissions:
   cutthin.admin:
     description: Full access to all CutThin commands
