@@ -1,6 +1,7 @@
 package kr.kjh9211.cutthin.cutscene
 
 import org.bukkit.Location
+import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.scheduler.BukkitTask
 import java.util.Collections
@@ -24,6 +25,10 @@ class CutsceneSession(
 
     @Volatile
     var hiddenInventory: InventorySnapshot? = null
+
+    /** Invisible rig entity the player's camera is bound to during a Move/LookAt step. */
+    @Volatile
+    var cameraRig: Entity? = null
 
     val subTasks: MutableList<BukkitTask> = Collections.synchronizedList(mutableListOf())
 

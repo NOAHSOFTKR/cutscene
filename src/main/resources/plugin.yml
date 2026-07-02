@@ -2,19 +2,16 @@ name: CutThin
 version: '1.0.0'
 main: kr.kjh9211.cutthin.CutThin
 api-version: '1.21'
+depend:
+  - ProtocolLib
 softdepend:
   - story
   - PlaceholderAPI
-  - ProtocolLib
 commands:
   cutscene:
     description: Cutscene playback controls
     usage: /cutscene <play|stop|list|info|reload>
     aliases: [cs, cut]
-  cameraspike:
-    description: TEMP Phase 0 camera spike test — remove before commit
-    usage: /cameraspike <start [spectator] [display]|stop>
-    permission: op
 permissions:
   cutthin.admin:
     description: Full access to all CutThin commands

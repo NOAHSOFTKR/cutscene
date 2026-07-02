@@ -12,9 +12,9 @@ import kr.kjh9211.cutthin.lock.PlayerLockListener
 import kr.kjh9211.cutthin.lock.SessionLifecycleListener
 import kr.kjh9211.cutthin.lock.TabListController
 import kr.kjh9211.cutthin.placeholder.CutThinPlaceholderBridge
+import kr.kjh9211.cutthin.runner.CameraRigController
 import kr.kjh9211.cutthin.runner.CutsceneRunner
 import kr.kjh9211.cutthin.runner.StepExecutor
-import kr.kjh9211.cutthin.spike.CameraSpikeCommand // TEMP Phase 0 spike — remove before commit
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
@@ -28,7 +28,8 @@ class CutThin : JavaPlugin() {
     private lateinit var tabListController: TabListController
     private lateinit var messageBlockListener: MessageBlockListener
     private lateinit var placeholderBridge: CutThinPlaceholderBridge
-    private var packetChatBlocker: PacketChatBlocker? = null
+    private lateinit var packetChatBlocker: PacketChatBlocker
+    private lateinit var cameraRigController: CameraRigController
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -39,21 +40,15 @@ class CutThin : JavaPlugin() {
         tabListController = TabListController(this, config)
         messageBlockListener = MessageBlockListener(config, lockListener::isLocked)
 
-        if (server.pluginManager.getPlugin("ProtocolLib") != null) {
-            try {
-                val blocker = PacketChatBlocker(this, lockListener::isLocked)
-                blocker.register()
-                packetChatBlocker = blocker
-            } catch (ex: Throwable) {
-                logger.warning("ProtocolLib found but PacketChatBlocker init failed: ${ex.message}")
-            }
-        } else {
-            logger.info("ProtocolLib not found — chat suppression uses event-based fallback only")
-        }
+        // ProtocolLib is a hard dependency (plugin.yml `depend`) — Bukkit refuses to enable
+        // CutThin at all if it's missing, so no runtime presence check is needed here.
+        packetChatBlocker = PacketChatBlocker(this, lockListener::isLocked)
+        packetChatBlocker.register()
+        cameraRigController = CameraRigController()
 
         extractDefaultCutscenes()
 
-        val executor = StepExecutor(this, packetChatBlocker)
+        val executor = StepExecutor(this, packetChatBlocker, cameraRigController)
         runner = CutsceneRunner(
             plugin = this,
             executor = executor,
@@ -81,9 +76,6 @@ class CutThin : JavaPlugin() {
 
         CutThinAPI.bind(registry, runner, { reloadCutscenes() })
 
-        // TEMP Phase 0 spike — remove this block before commit
-        getCommand("cameraspike")?.setExecutor(CameraSpikeCommand(this))
-
         placeholderBridge = CutThinPlaceholderBridge(this, { registry }, { runner })
         placeholderBridge.registerIfAvailable()
 
@@ -94,7 +86,9 @@ class CutThin : JavaPlugin() {
         if (::runner.isInitialized) {
             runner.stopAll(CutsceneEndEvent.Reason.STOPPED)
         }
-        packetChatBlocker?.unregister()
+        if (::packetChatBlocker.isInitialized) {
+            packetChatBlocker.unregister()
+        }
         if (::lockListener.isInitialized) {
             lockListener.clear()
         }
@@ -140,6 +134,9 @@ class CutThin : JavaPlugin() {
         if (player != null) {
             tabListController.release(player)
         }
+        if (::cameraRigController.isInitialized) {
+            cameraRigController.release(session, player)
+        }
 
         // On death, onDeathBeforeStop already added the snapshot to event.drops — skip restore.
         if (reason != CutsceneEndEvent.Reason.PLAYER_DEATH) {
@@ -162,10 +159,8 @@ class CutThin : JavaPlugin() {
     }
 
     private fun clearChat(player: Player) {
-        val blocker = packetChatBlocker
         repeat(100) {
-            if (blocker != null) blocker.bypassed(player) { player.sendMessage(" ") }
-            else player.sendMessage(" ")
+            packetChatBlocker.bypassed(player) { player.sendMessage(" ") }
         }
     }
 }
